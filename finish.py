@@ -202,6 +202,17 @@ elif selected_menu == "Prediksi":
     model = RandomForestRegressor()
     model.fit(X_train, y_train)
 
+    # Fungsi untuk mengganti koma dengan titik dan mengonversi ke float
+    def convert_to_float(value):
+        try:
+            # Mengganti koma dengan titik
+            value = value.replace(',', '.')
+            # Mengonversi string ke float
+            return float(value)
+        except ValueError:
+            # Jika terjadi kesalahan konversi, tampilkan pesan kesalahan
+            st.error("Format angka salah. Harap gunakan titik (.) sebagai pemisah desimal, bukan koma (,).")
+            return None
     # Predict function
     def predict_price(open_price, high_price, low_price, volume, change_percentage):
         features = [[open_price, high_price, low_price, volume, change_percentage]]
@@ -300,10 +311,10 @@ elif selected_menu == "Prediksi":
     if st.button('Prediksi'):
         if open_price and high_price and low_price and volume and change_percentage and prediction_date:
             # Convert inputs to float
-            open_price = float(open_price)
-            high_price = float(high_price)
-            low_price = float(low_price)
-            volume = float(volume)
+            open_price = convert_to_float(open_price)
+            high_price = convert_to_float(high_price)
+            low_price = convert_to_float(low_price)
+            volume = convert_to_float(volume)
             change_percentage = float(change_percentage)
 
             # Predict the price
