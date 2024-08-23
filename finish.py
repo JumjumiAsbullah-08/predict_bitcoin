@@ -161,11 +161,12 @@ elif selected_menu == "Data":
         """
         <hr>
         <h3>Pengujian dan Pengukuran Sistem</h3>
-        <p style="text-align:justify;">Dalam setiap pengujian dan pengukuran sistem dapat menggunakan metrik evaluasi, yaitu Root Mean Squared Error (RMSE) dan Mean Absolute Percentage Error (MAPE). Root Mean Squared Error (RMSE) merupakan ukuran besarnya kesalahan hasil prediksi, di mana semakin mendekati 0, nilai RMSE menunjukkan bahwa hasil prediksi semakin akurat. Dengan menggunakan persamaan tersebut, dapat menghitung nilai RMSE untuk mengevaluasi akurasi model prediksi. Semakin kecil nilai RMSE, semakin dekat prediksi model dengan nilai aktual, sehingga menunjukkan performa model yang lebih baik.</p>
-        <span>Rumus RMSE (Root Mean Square Error) :</span>
+        <p style="text-align:justify;">Dalam setiap pengujian dan pengukuran sistem dapat menggunakan metrik evaluasi, yaitu R-squared (R2) dan Mean Absolute Percentage Error (MAPE). R-squared (R2) merupakan ukuran yang menunjukkan seberapa baik model prediksi mampu menjelaskan variasi dalam data aktual. Nilai R2 berkisar antara 0 hingga 1, di mana semakin mendekati 1, nilai R2 menunjukkan bahwa model prediksi semakin akurat. Dengan menggunakan persamaan tersebut, dapat menghitung nilai R2 untuk mengevaluasi performa model prediksi. Semakin tinggi nilai R2, semakin baik model dalam memprediksi nilai aktual.</p>
+        <span>Rumus R-squared (R2) :</span>
         """, unsafe_allow_html=True
     )
-    st.markdown(r'$$\text{RMSE} = \sqrt{ \sum \frac{(X_i - \hat{Y}_i)}{n}^2}$$')
+
+    st.markdown(r'$$\text{R}^2 = 1 - \frac{\sum (Y_i - \hat{Y}_i)^2}{\sum (Y_i - \bar{Y})^2}$$')
     st.markdown(
         """
         <p style="text-align:justify;">Mean Absolute Percentage Error (MAPE) adalah metrik evaluasi yang digunakan untuk mengukur tingkat kesalahan relatif dari prediksi model dalam bentuk persentase. MAPE menghitung persentase rata-rata dari selisih absolut antara nilai prediksi dan nilai sebenarnya, dibagi dengan nilai sebenarnya, dan kemudian diambil rata-ratanya.</p>
