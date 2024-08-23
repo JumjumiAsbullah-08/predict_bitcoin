@@ -126,7 +126,7 @@ elif selected_menu == "Data":
             """, unsafe_allow_html=True
     )
     # Membaca dataset dari file CSV
-    dataset_path = "data-set.xlsx"
+    dataset_path = r"data-set.xlsx"
     df = pd.read_excel(dataset_path)
     
     # Menggantikan indeks DataFrame dengan nomor dari 1 hingga 1992
