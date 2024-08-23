@@ -126,7 +126,7 @@ elif selected_menu == "Data":
             """, unsafe_allow_html=True
     )
     # Membaca dataset dari file CSV
-    dataset_path = r"C:\project-btc\data-set.xlsx"
+    dataset_path = r"data-set.xlsx"
     df = pd.read_excel(dataset_path)
     
     # Menggantikan indeks DataFrame dengan nomor dari 1 hingga 1992
@@ -174,7 +174,7 @@ elif selected_menu == "Data":
     )
     st.markdown(r'$$\text{MAPE} = \frac{1}{n} \sum_{t=1}^{n} \left| \frac{y_i -  ŷ_i}{ŷ_i} \right| x 100\%$$')
 elif selected_menu == "Prediksi":
-    data_path = "C:/project-btc/asli.csv"
+    data_path = "asli.csv"
     df = pd.read_csv(data_path)
 
     # Preprocess the data
