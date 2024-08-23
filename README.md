@@ -22,5 +22,37 @@ This repository contains a Streamlit web application for predicting sales based 
 ## Installation
 Untuk menjalankan aplikasi ini secara lokal, ikuti langkah-langkah berikut:
 1. Clone repositori ini:
-   ``` git clone https://github.com/username/repo-name.git
-``` cd repo-name
+   ```bash
+   git clone https://github.com/username/repo-name.git
+   cd repo-name
+   ```
+2. Buat dan aktifkan lingkungan virtual (opsional tetapi direkomendasikan):
+   ```bash
+   python -m venv env
+   source env/bin/activate  # Di Windows gunakan `env\Scripts\activate`   
+   ```
+3. Instal dependensi yang tercantum dalam requirements.txt:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Jalankan aplikasi Streamlit:
+   ```bash
+   streamlit run app.py
+   ```
+## Cara Menggunakan Aplikasi
+1. Unggah Dataset: Aplikasi ini memungkinkan pengguna untuk mengunggah dataset dalam format CSV yang berisi data historis harga Bitcoin dan berbagai fitur lainnya. Pastikan file CSV yang diunggah memiliki kolom-kolom yang sesuai untuk proses prediksi.
+2. Eksplorasi Data: Setelah dataset diunggah, aplikasi menyediakan berbagai visualisasi dan statistik deskriptif untuk memahami data yang akan digunakan untuk prediksi. Ini termasuk visualisasi time series, distribusi fitur, dan korelasi antara variabel.
+3. Pelatihan Model: Aplikasi menggunakan algoritma Random Forest Regressor dari scikit-learn untuk membangun model prediksi. Pengguna dapat menyesuaikan beberapa parameter model sebelum memulai pelatihan.
+4. Evaluasi Model: Setelah model dilatih, aplikasi akan menampilkan metrik evaluasi seperti Mean Absolute Percentage Error (MAPE), dan R-squared (R2) untuk mengukur kinerja model.
+5. Prediksi: Pengguna dapat melakukan prediksi harga Bitcoin berdasarkan data baru yang diunggah. Hasil prediksi akan ditampilkan dalam bentuk grafik dan tabel.
+
+## Kontribusi
+Jika Anda ingin berkontribusi pada proyek ini, Anda bisa memulai dengan melakukan fork pada repositori ini dan membuat pull request. Anda juga bisa melaporkan masalah atau memberikan saran melalui bagian Issues di GitHub.
+
+## Lisensi
+Proyek ini dilisensikan di bawah MIT License. Anda bebas untuk menggunakan, menyalin, memodifikasi, dan mendistribusikan proyek ini sesuai dengan ketentuan lisensi.
+
+## Kredit
+1. Proyek ini dibangun menggunakan Streamlit, sebuah framework yang memudahkan pembuatan aplikasi web interaktif dengan Python.
+2. Terima kasih kepada Pandas, NumPy, scikit-learn, Matplotlib, dan Plotly yang menyediakan alat-alat penting untuk analisis data dan pembelajaran mesin.
+   
