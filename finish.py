@@ -5,7 +5,7 @@ import plotly.graph_objs as go
 import scipy.stats as stats
 import pytz
 import locale
-locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')  # Ganti 'en_US.UTF-8' sesuai dengan pengaturan lokal yang sesuai
+# locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')  # Ganti 'en_US.UTF-8' sesuai dengan pengaturan lokal yang sesuai
 import numpy as np
 import plotly.express as px
 import matplotlib.pyplot as plt
