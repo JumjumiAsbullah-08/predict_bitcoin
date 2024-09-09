@@ -504,7 +504,7 @@ elif selected_menu == "Tentang":
     col1, col2 = st.columns(2)
 
     # Gambar dan Biodata untuk Pembimbing Artikel Jurnal
-    gambar_pembimbing_path = "assets/pak sam.jpg"
+    gambar_pembimbing_path = "assets/profil.jpg"
     biodata_pembimbing = """
     **Nama :** Samsudin, ST,M.Kom
 
