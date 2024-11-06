@@ -175,223 +175,344 @@ elif selected_menu == "Data":
     )
     st.markdown(r'$$\text{MAPE} = \frac{1}{n} \sum_{t=1}^{n} \left| \frac{y_i -  ŷ_i}{ŷ_i} \right| x 100\%$$')
 elif selected_menu == "Prediksi":
-    # Fungsi untuk mendapatkan harga BTC terkini dari API CoinGecko
-    def get_live_btc_price():
-        try:
-            response = requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
-            data = response.json()
-            return data['bitcoin']['usd']
-        except Exception as e:
-            st.warning(f"Gagal mengambil data harga Bitcoin terkini dari CoinGecko: {e}")
-            return None
-
-    # Fungsi untuk mendapatkan data historis BTC dari API CoinGecko
-    def get_historical_btc_prices(days=30):
-        try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
-            response = requests.get(
-                'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range',
-                params={
-                    'vs_currency': 'usd',
-                    'from': int(start_date.timestamp()),
-                    'to': int(end_date.timestamp())
-                }
-            )
-            data = response.json()
-            prices = data['prices']
-            # Mengonversi timestamp ke objek datetime
-            prices = [(datetime.fromtimestamp(price[0] / 1000), price[1]) for price in prices]
-            return prices
-        except Exception as e:
-            st.warning(f"Gagal mengambil data historis harga Bitcoin dari CoinGecko: {e}")
-            return None
-
-    # Fungsi untuk konversi harga Bitcoin ke Rupiah
-    def convert_to_rupiah(price):
-        try:
-            response = requests.get("https://open.er-api.com/v6/latest/USD")
-            data = response.json()
-            exchange_rate = data["rates"]["IDR"]
-            return price * exchange_rate
-        except Exception as e:
-            st.warning(f"Gagal mengonversi harga ke Rupiah: {e}")
-            return None
-
-    # Baca data dari CSV
     data_path = "asli.csv"
     df = pd.read_csv(data_path)
 
-    # Pra-pemrosesan data
+    # Preprocess the data
     df['Date'] = pd.to_datetime(df['Date'])
     df.set_index('Date', inplace=True)
-    df['Vol'] = df['Vol'].replace('-', float('nan')).fillna(0).astype(float)
+
+    # Pra-pemrosesan data: Mengubah format 'Vol' menjadi float
+    df['Vol'] = df['Vol'].replace('-', float('nan'))  # Ganti '-' dengan NaN
+    df['Vol'] = df['Vol'].fillna(0)  # Isi nilai NaN dengan 0
+    df['Vol'] = df['Vol'].astype(float)  # Konversi ke float
+
+    # Pra-pemrosesan data: Mengubah format 'Change' menjadi float
     df['Change'] = df['Change'].str.replace('%', '').astype(float)
 
-    # Pilih fitur dan target
+    # Select features and target variable
     features = ['Open', 'High', 'Low', 'Vol', 'Change']
     target = 'Price'
+
+    # Split the data into train and test sets
     X = df[features]
     y = df[target]
-
-    # Split data untuk train dan test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Latih model Random Forest
+    # Train the Random Forest model
     model = RandomForestRegressor()
     model.fit(X_train, y_train)
 
-    # Fungsi untuk konversi string ke float dengan titik desimal
+    # Fungsi untuk mengganti koma dengan titik dan mengonversi ke float
     def convert_to_float(value):
         try:
+            # Mengganti koma dengan titik
             value = value.replace(',', '.')
+            # Mengonversi string ke float
             return float(value)
         except ValueError:
+            # Jika terjadi kesalahan konversi, tampilkan pesan kesalahan
             st.error("Format angka salah. Harap gunakan titik (.) sebagai pemisah desimal, bukan koma (,).")
             return None
-
-    # Validasi input
+    
+    # Validate input values
     def validate_inputs(open_price, high_price, low_price, volume, change_percentage):
         if open_price is None or high_price is None or low_price is None or volume is None:
             st.warning('Harap isi semua input yang diperlukan.')
             return False
+        # Check for reasonable ranges (optional, you can customize as needed)
+        # if open_price <= 0 or high_price <= 0 or low_price <= 0 or volume < 0:
+        #     st.warning('Nilai input harus positif.')
+        #     return False
         if high_price < low_price:
             st.error('Harga tertinggi tidak boleh lebih rendah dari harga terendah.')
             return False
         return True
 
-    # Fungsi prediksi harga
-    def predict_price(open_price, high_price, low_price, volume, change_percentage, model):
+
+    # Predict function
+    def predict_price(open_price, high_price, low_price, volume, change_percentage):
         features = [[open_price, high_price, low_price, volume, change_percentage]]
         prediction = model.predict(features)
         return prediction[0]
+
+    def get_live_btc_price_previous_day(date):
+        # Mengubah date (yang awalnya adalah objek datetime.date) menjadi datetime.datetime
+        date_time = datetime.combine(date, datetime.min.time())
+
+        previous_date = (date_time - pd.Timedelta(days=1)).timestamp()
+        current_date = date_time.timestamp()
+
+        endpoint = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range"
+        params = {
+            "vs_currency": "usd",
+            "from": previous_date,
+            "to": current_date,
+        }
+
+        try:
+            response = requests.get(endpoint, params=params)
+            data = response.json()
+            if "prices" in data and len(data["prices"]) > 0:
+                live_btc_price = data["prices"][0][1]
+                return live_btc_price
+            else:
+                st.warning("Data harga Bitcoin tidak tersedia untuk tanggal ini.")
+                return None
+        except Exception as e:
+            st.warning("Gagal mengambil data harga Bitcoin.")
+            return None
+    # Function to get live BTC price from CoinGecko
+    def get_live_btc_price(date):
+        endpoint = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
+        params = {
+            "vs_currency": "usd",
+            "days": "1",  # Retrieve data for the past 1 day
+        }
+
+        try:
+            response = requests.get(endpoint, params=params)
+            data = response.json()
+            if "prices" in data and len(data["prices"]) > 0:
+                # Get the most recent price
+                current_price = data["prices"][-1][1]
+                return current_price
+            else:
+                st.warning("Data harga Bitcoin tidak tersedia.")
+                return None
+        except Exception as e:
+            st.warning("Gagal mengambil data harga Bitcoin.")
+            return None
+            
+    # Function to convert Bitcoin price to Rupiah
+    def convert_to_rupiah(price):
+        response = requests.get(f"https://open.er-api.com/v6/latest/USD")
+        data = response.json()
+        exchange_rate = data["rates"]["IDR"]
+        rupiah_price = price * exchange_rate
+        return rupiah_price
+
+    # Function to get historical data for 30 days
+    def get_coingecko_historical_data(days):
+        url = f"https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
+        params = {"vs_currency": "usd", "days": days}
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            prices = data["prices"]
+            return prices
+        else:
+            return []
 
     # Streamlit app
     st.title('Prediksi Harga Bitcoin')
     st.warning('Harap isi semua input untuk melakukan prediksi')
 
-    # Buat dua kolom untuk input
+    # Create two columns for input features
     col1, col2 = st.columns(2)
 
+    # Input features for prediction in the first column
     with col1:
         open_price = st.text_input('Harga Pembukaan (USD) *', placeholder="Harga Pembuka (USD)")
         high_price = st.text_input('Harga Tertinggi (USD) *', placeholder="Harga Tertinggi (USD)")
         low_price = st.text_input('Harga Terendah (USD) *', placeholder="Harga Terendah (USD)")
 
+    # Input features for prediction in the second column
     with col2:
         volume = st.text_input('Volume (24H) *', placeholder="Volume (24H)")
         change_percentage = st.number_input('Perubahan Persentase (%) *')
         prediction_date = st.date_input('Tanggal Prediksi *')
 
-    # Tombol prediksi
+    # Button to trigger prediction
     if st.button('Prediksi'):
         if open_price and high_price and low_price and volume and change_percentage and prediction_date:
-            # Konversi input ke float
+            # Convert inputs to float
             open_price = convert_to_float(open_price)
             high_price = convert_to_float(high_price)
             low_price = convert_to_float(low_price)
             volume = convert_to_float(volume)
             change_percentage = float(change_percentage)
 
+            # Predict the price
+            prediction = predict_price(open_price, high_price, low_price, volume, change_percentage)
+
+            # Get the actual price from the previous day
+            actual_price = get_live_btc_price_previous_day(prediction_date)
+            current_price = get_live_btc_price(datetime.today())
+
             if validate_inputs(open_price, high_price, low_price, volume, change_percentage):
-                # Prediksi harga
-                prediction = predict_price(open_price, high_price, low_price, volume, change_percentage, model)
-                rupiah_prediction = convert_to_rupiah(prediction)
-                st.success(f'Prediksi Harga Bitcoin pada tanggal {prediction_date.strftime("%Y-%m-%d")}: $ {prediction:.2f} USD | Rp. {rupiah_prediction:,.2f}', icon="✅")
+                # Predict the price
+                prediction = predict_price(open_price, high_price, low_price, volume, change_percentage)
+                actual_price = get_live_btc_price_previous_day(prediction_date)
+                current_price = get_live_btc_price(datetime.today())
+                if actual_price is not None:
+                    # Calculate MAPE
+                    mape = (abs(actual_price - prediction) / actual_price) * 100
 
-                # Dapatkan harga BTC terkini
-                current_price = get_live_btc_price()
-                if current_price is not None:
+                    # Convert price to Rupiah
+                    rupiah_prediction = convert_to_rupiah(prediction)
+                    st.success(f'Prediksi Harga Bitcoin pada tanggal {prediction_date}: $ {prediction:.2f} USD | Rp. {rupiah_prediction:,.2f}', icon="✅")
+                    # Get live BTC price for today
                     rupiah_current_price = convert_to_rupiah(current_price)
-                    st.info(f'Harga Bitcoin pada tanggal hari ini [{datetime.today().strftime("%Y-%m-%d")}]: $ {current_price:.2f} USD | Rp. {rupiah_current_price:,.2f}', icon="ℹ")
+                    if current_price is not None:
+                        rupiah_current_price = convert_to_rupiah(current_price)
+                        st.info(f'Harga Bitcoin pada tanggal hari ini [{datetime.today().strftime("%Y-%m-%d")}]: $ {current_price:.2f} USD | Rp. {rupiah_current_price:,.2f}', icon="ℹ")
 
-                # Dapatkan dan tampilkan data historis BTC
-                historical_data = get_historical_btc_prices(30)
-                if historical_data:
-                    x_live = [data[0] for data in historical_data]
-                    y_live = [data[1] for data in historical_data]
+                    # Get live BTC price for the previous day
+                    live_btc_price_previous_day = get_live_btc_price_previous_day(prediction_date)
 
-                    # Buat DataFrame untuk data historis
-                    combined_data = {
-                        'Tanggal': x_live + [prediction_date],
-                        'Harga': y_live + [prediction],
-                        'Tipe Data': ['Harga Live BTC'] * len(x_live) + ['Prediksi']
-                    }
-                    df_combined = pd.DataFrame(combined_data)
+                    if live_btc_price_previous_day is not None:
+                        # Convert the live price to Rupiah
+                        latest_price_btc = convert_to_rupiah(live_btc_price_previous_day)
 
-                    # Plot garis data historis dan prediksi
-                    fig = px.line(df_combined, x='Tanggal', y='Harga', markers=True, color='Tipe Data', title='Harga Live Bitcoin (BTC) vs Hasil Prediksi')
-                    fig.update_traces(marker=dict(size=10, symbol='circle', color='blue'), selector=dict(name='Prediksi'))
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[prediction_date],
-                            y=[prediction],
-                            mode='markers+text',
-                            marker=dict(size=20, color='red'),
-                            text=[f"${prediction:.2f} USD"],
-                            textposition='top center',
-                            name='Hasil Prediksi'
-                        )
-                    )
-                    fig.update_xaxes(title_text='Tanggal')
-                    fig.update_yaxes(title_text='Harga (USD)')
-                    st.plotly_chart(fig)
+                        # Get historical data for the last 30 days
+                        historical_data = get_coingecko_historical_data(30)
+                        if historical_data:
+                            x_live = [datetime.utcfromtimestamp(data[0] / 1000).date() for data in historical_data]
+                            y_live = [data[1] for data in historical_data]
 
+                            # Create a DataFrame for live data
+                            live_data = {
+                                'Tanggal': x_live,
+                                'Harga': y_live,
+                                'Tipe Data': ['Harga Live BTC'] * len(x_live)
+                            }
 
-                # Hitung MAPE dan R²
-                y_pred = model.predict(X_test)
-                mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
-                r2 = r2_score(y_test, y_pred)
+                            # Combine the live data and prediction data into one DataFrame
+                            combined_data = {
+                                'Tanggal': x_live + [prediction_date],
+                                'Harga': y_live + [prediction],
+                                'Tipe Data': ['Harga Live BTC'] * len(x_live) + ['Prediksi']
+                            }
 
-                with st.expander(f'Mean Absolute Percentage Error (MAPE): {mape:.2f} %'):
-                    st.write(f"MAPE adalah metrik untuk mengukur tingkat kesalahan dalam prediksi perbandingan persentase antara prediksi dan data aktual. Nilai MAPE yang lebih rendah menunjukkan prediksi yang lebih akurat. Hasil MAPE: {mape:.2f} %")
+                            df_combined = pd.DataFrame(combined_data)
 
-                with st.expander(f'R-squared (R²): {r2:.2f}'):
-                    st.write(f"R-squared (R²) mengukur seberapa baik model Anda menjelaskan variasi dalam data. Nilai R² yang lebih tinggi menunjukkan model yang lebih baik. Hasil R²: {r2:.2f}")
+                            # Create a Plotly Express area chart for combined data
+                            fig = px.line(df_combined, x='Tanggal', y='Harga', markers=True, color='Tipe Data', title='Harga Live Bitcoin (BTC) vs Hasil Prediksi')
 
-                # Grafik batang MAPE dan R²
-                fig_bar = px.bar(x=['MAPE', 'R²'], y=[mape, r2], color=['MAPE', 'R²'], labels={'y': 'Nilai'}, title='Grafik Batang MAPE dan R²', barmode='group', width=600)
-                st.plotly_chart(fig_bar)
+                            # Customize the layout for markers
+                            fig.update_traces(marker=dict(size=10, symbol='circle', color='blue'), selector=dict(name='Prediksi'))
 
-                # Grafik scatter hasil training dan testing
-                result_train_df = pd.DataFrame({
-                    'Date': X_train.index,
-                    'Hasil Testing/Training': y_train.values - model.predict(X_train),
-                    'Set': 'Training'
-                })
+                            # Add a large marker with a label for the prediction point
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=[prediction_date],
+                                    y=[prediction],
+                                    mode='markers+text',
+                                    marker=dict(size=20, color='red'),
+                                    text=[f"${prediction:.2f} USD"],
+                                    textposition='top center',
+                                    name='Hasil Prediksi'
+                                )
+                            )
 
-                result_test_df = pd.DataFrame({
-                    'Date': X_test.index,
-                    'Hasil Testing/Training': y_test.values - y_pred,
-                    'Set': 'Testing'
-                })
+                            # Update the axes titles
+                            fig.update_xaxes(title_text='Tanggal')
+                            fig.update_yaxes(title_text='Harga (USD)')
 
-                result_combined_df = pd.concat([result_train_df, result_test_df], ignore_index=True)
+                            # Show the combined data chart in Streamlit
+                            st.plotly_chart(fig)
 
-                st.subheader('Plot Scatter Hasil Training')
-                fig_train, ax_train = plt.subplots(figsize=(10, 5))
-                ax_train.scatter(result_combined_df[result_combined_df['Set'] == 'Training']['Date'], 
-                                result_combined_df[result_combined_df['Set'] == 'Training']['Hasil Testing/Training'], 
-                                color='blue', alpha=0.5, s=50, label='Training')
-                ax_train.set_title('Hasil Training')
-                ax_train.set_xlabel('Date')
-                ax_train.set_ylabel('Hasil Testing/Training')
-                ax_train.legend()
-                st.pyplot(fig_train)
+                            # Menghitung MAPE dan R²
+                            y_pred = model.predict(X_test)
 
-                st.subheader('Plot Scatter Hasil Testing')
-                fig_test, ax_test = plt.subplots(figsize=(10, 5))
-                ax_test.scatter(result_combined_df[result_combined_df['Set'] == 'Testing']['Date'], 
-                                result_combined_df[result_combined_df['Set'] == 'Testing']['Hasil Testing/Training'], 
-                                color='red', alpha=0.5, s=50, label='Testing')
-                ax_test.set_title('Hasil Testing')
-                ax_test.set_xlabel('Date')
-                ax_test.set_ylabel('Hasil Testing/Training')
-                ax_test.legend()
-                st.pyplot(fig_test)
+                            # MAPE
+                            # mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+
+                            # R²
+                            r2 = r2_score(y_test, y_pred)
+
+                            with st.expander(f'Mean Absolute Percentage Error (MAPE): {mape:.2f} %'):
+                                st.write(f"MAPE adalah metrik untuk mengukur tingkat kesalahan dalam prediksi perbandingan persentase antara prediksi dan data aktual. Nilai MAPE yang lebih rendah menunjukkan prediksi yang lebih akurat. Hasil MAPE: {mape:.2f} %")
+
+                            with st.expander(f'R-squared (R²): {r2:.2f}'):
+                                st.write(f"R-squared (R²) mengukur seberapa baik model Anda menjelaskan variasi dalam data. Nilai R² yang lebih tinggi menunjukkan model yang lebih baik. Hasil R²: {r2:.2f}")
+
+                            # Creating bar chart for MAPE and R²
+                            fig_bar = px.bar(x=['MAPE', 'R²'],
+                                            y=[mape, r2],
+                                            color=['MAPE', 'R²'],
+                                            labels={'y': 'Nilai'},
+                                            title='Grafik Batang MAPE dan R²',
+                                            barmode='group',
+                                            width=600)
+
+                            # Display bar chart in Streamlit
+                            st.plotly_chart(fig_bar)
+
+                            # Load dataset from CSV file
+                            file_path = 'asli.csv'
+                            df = pd.read_csv(file_path)
+
+                            # Preprocessing
+                            df['Vol'] = df['Vol'].replace('-', float('nan'))  # Replace '-' with NaN
+                            df['Vol'] = df['Vol'].fillna(0)  # Fill NaN with 0
+                            df['Change'] = df['Change'].str.replace('%', '').astype(float)  # Convert 'Change' to float
+
+                            # Select features and target variable
+                            features = ['Date', 'Open', 'High', 'Low', 'Vol', 'Change']
+                            target = 'Price'
+
+                            # Split the data into train and test sets
+                            X_train, X_test, y_train, y_test = train_test_split(df[features], df[target], test_size=0.2, random_state=42)
+
+                            # Initialize and train the Random Forest model
+                            model_rf = RandomForestRegressor(n_estimators=100, random_state=42)
+                            model_rf.fit(X_train.drop(columns=['Date']), y_train)  # Drop 'Date' for training
+
+                            # Predict on the training and testing sets
+                            y_train_pred = model_rf.predict(X_train.drop(columns=['Date']))
+                            y_test_pred = model_rf.predict(X_test.drop(columns=['Date']))
+
+                            # Create a dataframe for the results of training and testing
+                            result_train_df = pd.DataFrame({
+                                'Date': X_train['Date'],
+                                'Hasil Testing/Training': y_train.values - y_train_pred,
+                                'Set': 'Training'
+                            })
+
+                            result_test_df = pd.DataFrame({
+                                'Date': X_test['Date'],
+                                'Hasil Testing/Training': y_test.values - y_test_pred,
+                                'Set': 'Testing'
+                            })
+
+                            # Combine the results into one dataframe
+                            result_combined_df = pd.concat([result_train_df, result_test_df], ignore_index=True)
+
+                            # Streamlit app
+                            # st.title('Hasil Training dan Testing Random Forest')
+
+                            # Plot hasil training
+                            st.subheader('Plot Scatter Hasil Training')
+                            fig_train, ax_train = plt.subplots(figsize=(10, 5))
+                            ax_train.scatter(result_combined_df[result_combined_df['Set'] == 'Training']['Date'], 
+                                            result_combined_df[result_combined_df['Set'] == 'Training']['Hasil Testing/Training'], 
+                                            color='blue', alpha=0.5, s=50, label='Training')
+                            ax_train.set_title('Hasil Training')
+                            ax_train.set_xlabel('Date')
+                            ax_train.set_ylabel('Hasil Testing/Training')
+                            ax_train.legend()
+                            st.pyplot(fig_train)
+
+                            # Plot hasil testing
+                            st.subheader('Plot Scatter Hasil Testing')
+                            fig_test, ax_test = plt.subplots(figsize=(10, 5))
+                            ax_test.scatter(result_combined_df[result_combined_df['Set'] == 'Testing']['Date'], 
+                                            result_combined_df[result_combined_df['Set'] == 'Testing']['Hasil Testing/Training'], 
+                                            color='red', alpha=0.5, s=50, label='Testing')
+                            ax_test.set_title('Hasil Testing')
+                            ax_test.set_xlabel('Date')
+                            ax_test.set_ylabel('Hasil Testing/Training')
+                            ax_test.legend()
+                            st.pyplot(fig_test)
+                        else:
+                            st.warning("Gagal mengambil data historis dari API.")
+                else:
+                    st.warning("Gagal mengambil harga live Bitcoin.")
             else:
                 st.warning('Harap isi semua input yang diperlukan.')
-
     # Tombol Reset
     if st.button('Reset'):
         # Setel ulang parameter query
